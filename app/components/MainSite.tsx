@@ -102,7 +102,7 @@ function Nav() {
     }}>
       <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="#" style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-          <span style={{ fontFamily: 'var(--font-playfair, Playfair Display, serif)', fontSize: '19px', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--fg)' }}>TOP CROP</span>
+          <span style={{ fontFamily: 'var(--font-playfair, Playfair Display, serif)', fontSize: '19px', fontWeight: 700, letterSpacing: '0.06em', color: scrolled ? '#edf8ed' : 'var(--fg)' }}>TOP CROP</span>
           <span style={{ fontSize: '8px', letterSpacing: '0.35em', color: 'var(--accent)', textTransform: 'uppercase' }}>Tanzania</span>
         </a>
         <div style={{ display: 'flex', gap: '28px', alignItems: 'center' }}>
