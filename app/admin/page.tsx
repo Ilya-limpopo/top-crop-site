@@ -152,7 +152,8 @@ function NewsSection({ data, onChange }: { data: SiteData; onChange: (d: SiteDat
   }
 
   async function remove(id: number) {
-    await fetch(`/api/news/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/news/${id}`, { method: 'DELETE' });
+    if (!res.ok) { alert('Failed to delete article. Please try again.'); return; }
     onChange({ ...data, news: news.filter(n => n.id !== id) });
   }
 
@@ -222,7 +223,8 @@ function CareersSection({ data, onChange }: { data: SiteData; onChange: (d: Site
   }
 
   async function remove(id: number) {
-    await fetch(`/api/careers/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/careers/${id}`, { method: 'DELETE' });
+    if (!res.ok) { alert('Failed to delete position. Please try again.'); return; }
     onChange({ ...data, careers: careers.filter(c => c.id !== id) });
   }
 
