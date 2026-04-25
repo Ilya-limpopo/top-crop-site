@@ -14,17 +14,22 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    setLoading(false);
-    if (res.ok) {
-      router.push('/admin');
-    } else {
-      setError('Invalid email or password.');
-      setPassword('');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (res.ok) {
+        router.push('/admin');
+      } else {
+        setError('Invalid email or password.');
+        setPassword('');
+      }
+    } catch {
+      setError('Connection error. Please try again.');
+    } finally {
+      setLoading(false);
     }
   }
 

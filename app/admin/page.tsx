@@ -308,10 +308,14 @@ export default function AdminPage() {
   useEffect(() => {
     fetch('/api/auth/check')
       .then(r => r.json())
-      .then(j => { if (!j.authenticated) router.push('/admin/login'); });
+      .then(j => { if (!j.authenticated) router.push('/admin/login'); })
+      .catch(() => router.push('/admin/login'));
+
     fetch('/api/data')
-      .then(r => r.json())
-      .then(d => { setData(d); setLoaded(true); });
+      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); })
+      .then((d: SiteData) => { if (d && 'content' in d) setData(d); })
+      .catch(e => console.error('[Admin] data fetch failed:', e))
+      .finally(() => setLoaded(true));
   }, [router]);
 
   async function handleSave() {
