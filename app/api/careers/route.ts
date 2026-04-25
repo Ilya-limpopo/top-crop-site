@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
-import { db, init } from '@/lib/db';
+import { execute, init } from '@/lib/db';
 import { isAuthenticated } from '@/lib/auth';
 
 export async function GET() {
   await init();
-  const { rows } = await db.execute('SELECT id, title, location, type FROM careers');
+  const { rows } = await execute('SELECT id, title, location, type FROM careers');
   return NextResponse.json(rows);
 }
 
@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
   await init();
 
   const { title, location, type } = await req.json();
-  const result = await db.execute({
-    sql:  'INSERT INTO careers (title, location, type) VALUES (?, ?, ?)',
-    args: [title, location, type],
-  });
-  return NextResponse.json({ id: Number(result.lastInsertRowid), title, location, type });
+  const result = await execute(
+    'INSERT INTO careers (title, location, type) VALUES (?, ?, ?)',
+    [title, location, type],
+  );
+  return NextResponse.json({ id: result.lastInsertRowid, title, location, type });
 }

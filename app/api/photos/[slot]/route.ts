@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
-import { db, init } from '@/lib/db';
+import { execute, init } from '@/lib/db';
 import { isAuthenticated } from '@/lib/auth';
 import { deleteImage } from '@/lib/cloudinary';
 
@@ -11,6 +11,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { slot: st
   const slot = decodeURIComponent(params.slot);
   try { await deleteImage(slot); } catch { /* already deleted or never on cloudinary */ }
 
-  await db.execute({ sql: 'DELETE FROM photos WHERE slot=?', args: [slot] });
+  await execute('DELETE FROM photos WHERE slot=?', [slot]);
   return NextResponse.json({ ok: true });
 }

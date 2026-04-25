@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
-import { db, init } from '@/lib/db';
+import { execute, batch, init } from '@/lib/db';
 import { isAuthenticated } from '@/lib/auth';
 
 export async function GET() {
   await init();
-  const { rows } = await db.execute('SELECT key, value FROM settings');
+  const { rows } = await execute('SELECT key, value FROM settings');
   const settings: Record<string, string> = {};
   rows.forEach(r => { settings[r.key as string] = r.value as string; });
   return NextResponse.json(settings);
@@ -16,7 +16,7 @@ export async function PUT(req: NextRequest) {
   await init();
 
   const body: Record<string, string> = await req.json();
-  await db.batch(
+  await batch(
     Object.entries(body).map(([k, v]) => ({
       sql:  'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
       args: [k, v],

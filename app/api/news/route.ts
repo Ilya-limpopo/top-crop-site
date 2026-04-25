@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
-import { db, init } from '@/lib/db';
+import { execute, init } from '@/lib/db';
 import { isAuthenticated } from '@/lib/auth';
 
 export async function GET() {
   await init();
-  const { rows } = await db.execute('SELECT id, date, category, title, body FROM news ORDER BY created_at DESC');
+  const { rows } = await execute('SELECT id, date, category, title, body FROM news ORDER BY created_at DESC');
   return NextResponse.json(rows);
 }
 
@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
   await init();
 
   const { date, category, title, body } = await req.json();
-  const result = await db.execute({
-    sql:  'INSERT INTO news (date, category, title, body) VALUES (?, ?, ?, ?)',
-    args: [date, category, title, body],
-  });
-  return NextResponse.json({ id: Number(result.lastInsertRowid), date, category, title, body });
+  const result = await execute(
+    'INSERT INTO news (date, category, title, body) VALUES (?, ?, ?, ?)',
+    [date, category, title, body],
+  );
+  return NextResponse.json({ id: result.lastInsertRowid, date, category, title, body });
 }
