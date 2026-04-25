@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Top Crop — Grown in Tanzania</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.4s, color 0.4s;
+}
+h1,h2,h3,h4 { font-family: 'Playfair Display', Georgia, serif; line-height: 1.12; }
+a { color: inherit; text-decoration: none; }
+.container { max-width: 1240px; margin: 0 auto; padding: 0 56px; }
+.label {
+  font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--accent); font-weight: 500; font-family: 'DM Sans', sans-serif;
+}
+.fade-in { opacity: 0; transform: translateY(22px); transition: opacity 0.75s ease, transform 0.75s ease; }
+.fade-in.vis { opacity: 1; transform: translateY(0); }
+.placeholder-img {
+  background:
+    repeating-linear-gradient(-45deg,
+      rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px,
+      transparent 1px, transparent 14px);
+  border: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  color: var(--fg-muted); font-size: 11px; letter-spacing: 0.08em;
+  font-family: 'Courier New', monospace;
+}
+input, textarea, select {
+  width: 100%; background: var(--bg-sub); border: 1px solid var(--border);
+  color: var(--fg); padding: 13px 16px; font-size: 15px; border-radius: 2px;
+  outline: none; font-family: 'DM Sans', sans-serif;
+  transition: border-color 0.2s;
+}
+input:focus, textarea:focus { border-color: var(--accent); }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--fg-muted); border-radius: 3px; }
+
+/* Banana yellow primary button */
+.btn-banana {
+  display: inline-block;
+  background: #f5c800;
+  color: #1a1100;
+  border: none;
+  border-radius: 2px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.22s ease;
+  text-decoration: none;
+}
+.btn-banana:hover {
+  background: #ffd400;
+  transform: translateY(-2px) scale(1.025);
+  box-shadow: 0 8px 28px rgba(245, 196, 0, 0.38);
+}
+.btn-banana:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "light",
+  "heroStyle": "minimal",
+  "navStyle": "transparent"
+}/*EDITMODE-END*/;
+
+// ── Theme ───────────────────────────────────────────────────────────────────
+const THEMES = {
+  dark: {
+    '--bg':       '#091f10',
+    '--bg-card':  '#0d2717',
+    '--bg-sub':   '#112e1c',
+    '--fg':       '#edf8ed',
+    '--fg-muted': '#6aab7a',
+    '--accent':   '#7ed63a',
+    '--accent2':  '#f2c040',
+    '--border':   'rgba(255,255,255,0.07)',
+  },
+  light: {
+    '--bg':       '#f0f9eb',
+    '--bg-card':  '#e4f2dc',
+    '--bg-sub':   '#f8fef4',
+    '--fg':       '#0a2014',
+    '--fg-muted': '#457553',
+    '--accent':   '#2b8c30',
+    '--accent2':  '#c07c10',
+    '--border':   'rgba(0,0,0,0.1)',
+  },
+  earth: {
+    '--bg':       '#14100a',
+    '--bg-card':  '#1c1710',
+    '--bg-sub':   '#211c12',
+    '--fg':       '#f5ece0',
+    '--fg-muted': '#9a7850',
+    '--accent':   '#c6d638',
+    '--accent2':  '#e09030',
+    '--border':   'rgba(255,255,255,0.07)',
+  },
+};
+
+function applyTheme(t) {
+  const vars = THEMES[t] || THEMES.dark;
+  const root = document.documentElement.style;
+  Object.entries(vars).forEach(([k, v]) => root.setProperty(k, v));
+}
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+const PHOTOS = {
+  'aerial plantation view':  'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200&q=82&fit=crop&auto=format',
+  'banana harvest':          'https://images.unsplash.com/photo-1528825871115-3581a5387919?w=900&q=82&fit=crop&auto=format',
+  'field workers':           'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=700&q=82&fit=crop&auto=format',
+  'palm nursery':            'https://images.unsplash.com/photo-1448375240586-882707db888b?w=700&q=82&fit=crop&auto=format',
+  'quality check':           'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=700&q=82&fit=crop&auto=format',
+  'banana bunch close-up':   'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=900&q=82&fit=crop&auto=format',
+  'palm fruit cluster':      'https://images.unsplash.com/photo-1586771107445-d3ca888129ce?w=900&q=82&fit=crop&auto=format',
+  'ESG annual report':       'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=900&q=82&fit=crop&auto=format',
+  'banana plantation rows':  'https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=1400&q=82&fit=crop&auto=format',
+  'palm tree canopy':        'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=700&q=82&fit=crop&auto=format',
+  'harvesting team':         'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=700&q=82&fit=crop&auto=format',
+  'processing facility':     'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=700&q=82&fit=crop&auto=format',
+  'export packaging':        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1400&q=82&fit=crop&auto=format',
+  'irrigation system':       'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=700&q=82&fit=crop&auto=format',
+  'sunrise over farm':       'https://images.unsplash.com/photo-1476041800959-2f6bb412c8ce?w=700&q=82&fit=crop&auto=format',
+  'soil sampling':           'https://images.unsplash.com/photo-1416339306562-f3d12fefd36f?w=700&q=82&fit=crop&auto=format',
+  'plantation landscape':    'https://images.unsplash.com/photo-1444930694458-01babf71870c?w=1400&q=82&fit=crop&auto=format',
+};
+
+function Img({ label, style = {} }) {
+  const [err, setErr] = useState(false);
+  const src = PHOTOS[label];
+  if (src && !err) {
+    return (
+      <div style={{ overflow:'hidden', flexShrink:0, ...style }}>
+        <img
+          src={src} alt={label}
+          onError={() => setErr(true)}
+          style={{ width:'100%', height:'100%', objectFit:'cover', display:'block', transition:'transform 0.5s ease' }}
+          onMouseEnter={e => e.target.style.transform='scale(1.04)'}
+          onMouseLeave={e => e.target.style.transform='scale(1)'}
+        />
+      </div>
+    );
+  }
+  return (
+    <div className="placeholder-img" style={style}>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{opacity:0.28}}>
+        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+        <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+        <path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="1.5"/>
+      </svg>
+      <span style={{opacity:0.45, textAlign:'center', padding:'0 12px'}}>{label}</span>
+    </div>
+  );
+}
+
+function FadeIn({ children, delay = 0, style = {} }) {
+  const ref = useRef();
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('vis'), delay);
+        obs.disconnect();
+      }
+    }, { threshold: 0.08 });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
+  return <div ref={ref} className="fade-in" style={style}>{children}</div>;
+}
+
+function Counter({ end, suffix = '' }) {
+  const [n, setN] = useState(0);
+  const ref = useRef();
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) {
+        let s = null;
+        const step = (ts) => {
+          if (!s) s = ts;
+          const p = Math.min((ts - s) / 1600, 1);
+          setN(Math.floor(p * end));
+          if (p < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+        obs.disconnect();
+      }
+    });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, [end]);
+  return <span ref={ref}>{n.toLocaleString()}{suffix}</span>;
+}
+
+// ── Nav ──────────────────────────────────────────────────────────────────────
+function Nav({ navStyle }) {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const h = () => setScrolled(window.scrollY > 50);
+    window.addEventListener('scroll', h);
+    return () => window.removeEventListener('scroll', h);
+  }, []);
+  const opaque = scrolled || navStyle === 'solid';
+  const links = [
+    ['About', '#about'], ['Products', '#products'], ['Sustainability', '#sustainability'],
+    ['Farm', '#farm'], ['News', '#news'], ['Careers', '#careers'],
+  ];
+  return (
+    <nav style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
+      padding: '18px 0',
+      background: opaque ? 'rgba(9,31,16,0.95)' : 'transparent',
+      backdropFilter: opaque ? 'blur(14px)' : 'none',
+      borderBottom: opaque ? '1px solid var(--border)' : 'none',
+      transition: 'all 0.35s ease',
+    }}>
+      <div className="container" style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <a href="#" style={{ display:'flex', flexDirection:'column', gap:'1px' }}>
+          <span style={{ fontFamily:'Playfair Display', fontSize:'19px', fontWeight:700, letterSpacing:'0.06em', color:'var(--fg)' }}>
+            TOP CROP
+          </span>
+          <span style={{ fontSize:'8px', letterSpacing:'0.35em', color:'var(--accent)', textTransform:'uppercase' }}>Tanzania</span>
+        </a>
+        <div style={{ display:'flex', gap:'28px', alignItems:'center' }}>
+          {links.map(([l, h]) => (
+            <a key={l} href={h} style={{ fontSize:'12.5px', letterSpacing:'0.04em', color:'var(--fg-muted)', transition:'color 0.2s' }}
+              onMouseEnter={e=>e.target.style.color='var(--fg)'}
+              onMouseLeave={e=>e.target.style.color='var(--fg-muted)'}>
+              {l}
+            </a>
+          ))}
+          <a href="#contact" className="btn-banana" style={{ fontSize:'11.5px', padding:'9px 22px' }}>
+            Contact
+          </a>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+// ── Hero ─────────────────────────────────────────────────────────────────────
+function HeroBold() {
+  return (
+    <section id="hero" style={{ minHeight:'100vh', display:'flex', alignItems:'center', position:'relative', overflow:'hidden', paddingTop:'80px' }}>
+      <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 60% 60% at 75% 50%, rgba(125,214,58,0.07) 0%, transparent 70%)', pointerEvents:'none' }}/>
+      <div style={{ position:'absolute', right:0, top:0, bottom:0, width:'38%', display:'flex', flexDirection:'column' }}>
+        <Img label="aerial plantation view" style={{ height:'58%', borderRadius:0, borderRight:'none', borderTop:'none', borderLeft:'none' }}/>
+        <Img label="banana harvest" style={{ height:'42%', borderRadius:0, borderRight:'none', borderBottom:'none', borderLeft:'none' }}/>
+      </div>
+      <div className="container" style={{ position:'relative', zIndex:1 }}>
+        <div style={{ maxWidth:'660px' }}>
+          <FadeIn>
+            <div className="label" style={{ marginBottom:'28px' }}>Tanzania · Est. 2008</div>
+            <h1 style={{ fontSize:'clamp(44px, 6vw, 84px)', fontWeight:700, lineHeight:1.05, marginBottom:'28px', letterSpacing:'-0.015em' }}>
+              From Tanzania's<br/>Fertile Soil to the<br/>
+              <em style={{ color:'var(--accent)', fontStyle:'italic' }}>World's Table.</em>
+            </h1>
+          </FadeIn>
+          <FadeIn delay={180}>
+            <p style={{ fontSize:'17px', color:'var(--fg-muted)', maxWidth:'480px', lineHeight:1.85, marginBottom:'44px' }}>
+              We grow premium bananas and sustainable palm oil across East Africa's most productive land — connecting Tanzanian agriculture to global markets.
+            </p>
+            <div style={{ display:'flex', gap:'14px' }}>
+              {[['Explore Products','#products','filled'],['Our Story','#about','outline']].map(([t,h,v])=>(
+                <a key={t} href={h}
+                  className={v==='filled' ? 'btn-banana' : ''}
+                  style={{
+                    padding:'15px 34px', borderRadius:'2px', fontSize:'12px',
+                    fontWeight: v==='outline'?400:undefined, letterSpacing:'0.08em', textTransform:'uppercase',
+                    background: v==='outline'?'transparent':undefined,
+                    color: v==='outline'?'var(--fg)':undefined,
+                    border: v==='outline'?'1px solid rgba(255,255,255,0.2)':undefined,
+                    transition: v==='outline'?'border-color 0.2s':undefined,
+                    display:'inline-block',
+                  }}
+                  onMouseEnter={e=>{ if(v==='outline') e.target.style.borderColor='var(--accent)'; }}
+                  onMouseLeave={e=>{ if(v==='outline') e.target.style.borderColor='rgba(255,255,255,0.2)'; }}>
+                  {t}
+                </a>
+              ))}
+            </div>
+          </FadeIn>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HeroSplit() {
+  return (
+    <section id="hero" style={{ minHeight:'100vh', display:'grid', gridTemplateColumns:'1fr 1fr', paddingTop:0 }}>
+      <div style={{ display:'flex', flexDirection:'column', justifyContent:'center', padding:'130px 56px 80px 56px' }}>
+        <div className="label" style={{ marginBottom:'24px' }}>Est. 2008 · Tanzania</div>
+        <h1 style={{ fontSize:'clamp(38px, 4.5vw, 64px)', fontWeight:700, lineHeight:1.08, marginBottom:'24px' }}>
+          Grown by Nature,<br/>
+          <em style={{ fontStyle:'italic', color:'var(--accent)' }}>Delivered</em><br/>
+          with Purpose.
+        </h1>
+        <p style={{ fontSize:'16px', color:'var(--fg-muted)', marginBottom:'40px', maxWidth:'400px', lineHeight:1.85 }}>
+          Top Crop cultivates premium bananas and palm oil across Tanzania's most fertile regions — supplying global markets with integrity and care.
+        </p>
+        <div style={{ display:'flex', gap:'14px' }}>
+          <a href="#products" className="btn-banana" style={{ padding:'14px 30px', fontSize:'12px' }}>
+            Our Products
+          </a>
+          <a href="#contact" style={{ padding:'14px 30px', border:'1px solid var(--border)', color:'var(--fg)', borderRadius:'2px', fontSize:'12px', letterSpacing:'0.08em', textTransform:'uppercase' }}>
+            Get in Touch
+          </a>
+        </div>
+      </div>
+      <Img label="plantation landscape" style={{ minHeight:'100vh', borderRadius:0, borderTop:'none', borderRight:'none', borderBottom:'none' }}/>
+    </section>
+  );
+}
+
+function HeroMinimal() {
+  return (
+    <section id="hero" style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', textAlign:'center', paddingTop:'80px' }}>
+      <div className="container">
+        <FadeIn>
+          <div className="label" style={{ marginBottom:'36px' }}>Top Crop · Tanzania · Est. 2024</div>
+          <h1 style={{ fontSize:'clamp(52px, 8vw, 110px)', fontWeight:400, lineHeight:1.0, letterSpacing:'-0.025em', marginBottom:'36px' }}>
+            Agriculture<br/><em style={{ fontStyle:'italic', color:'var(--fg-muted)' }}>done right.</em>
+          </h1>
+          <p style={{ fontSize:'18px', color:'var(--fg-muted)', maxWidth:'480px', margin:'0 auto 52px', lineHeight:1.8 }}>
+            Premium bananas and sustainable palm oil — from Tanzania's heart to global markets.
+          </p>
+          <div style={{ width:'1px', height:'72px', background:'var(--accent)', margin:'0 auto', opacity:0.5 }}/>
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
+function Hero({ heroStyle }) {
+  if (heroStyle === 'split') return <HeroSplit/>;
+  if (heroStyle === 'minimal') return <HeroMinimal/>;
+  return <HeroBold/>;
+}
+
+// ── Stats ────────────────────────────────────────────────────────────────────
+function Stats() {
+  const items = [
+    [5000, '+', 'Hectares Cultivated'],
+    [12, 'K+', 'Tonnes Exported Yearly'],
+    [30, '+', 'Global Partners'],
+    [800, '+', 'Local Employees'],
+  ];
+  return (
+    <div style={{ background:'var(--bg-sub)', borderTop:'1px solid var(--border)', borderBottom:'1px solid var(--border)', padding:'52px 0' }}>
+      <div className="container">
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)' }}>
+          {items.map(([v, s, l], i) => (
+            <div key={i} style={{ textAlign:'center', padding:'20px 16px', borderRight: i<3 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ fontSize:'46px', fontFamily:'Playfair Display', fontWeight:600, color:'var(--accent)', lineHeight:1 }}>
+                <Counter end={v} suffix={s}/>
+              </div>
+              <div style={{ fontSize:'10.5px', color:'var(--fg-muted)', marginTop:'10px', letterSpacing:'0.12em', textTransform:'uppercase' }}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── About ────────────────────────────────────────────────────────────────────
+function About() {
+  return (
+    <section id="about" style={{ padding:'120px 0' }}>
+      <div className="container">
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'88px', alignItems:'center' }}>
+          <FadeIn>
+            <div className="label" style={{ marginBottom:'16px' }}>About Top Crop</div>
+            <h2 style={{ fontSize:'clamp(28px, 3.5vw, 50px)', fontWeight:600, marginBottom:'28px' }}>
+              Rooted in Tanzania,<br/>Reaching the World
+            </h2>
+            <p style={{ fontSize:'16px', color:'var(--fg-muted)', lineHeight:1.85, marginBottom:'18px' }}>
+              Founded in 2024, Top Crop is one of East Africa's leading agricultural producers. We operate across Tanzania's most fertile regions — from the slopes of Kilimanjaro to the coastal lowlands — cultivating bananas and oil palms with generational expertise and modern sustainability practices.
+            </p>
+            <p style={{ fontSize:'16px', color:'var(--fg-muted)', lineHeight:1.85, marginBottom:'44px' }}>
+              Our mission is to produce the finest crops while creating lasting value for local communities, international partners, and our natural environment.
+            </p>
+            <div style={{ display:'flex', gap:'36px' }}>
+              {[['2024','Founded'],['ISO 9001','Certified'],['3 Regions','Tanzania']].map(([v,l])=>(
+                <div key={v}>
+                  <div style={{ fontSize:'20px', fontFamily:'Playfair Display', fontWeight:600, marginBottom:'5px' }}>{v}</div>
+                  <div style={{ fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.12em', textTransform:'uppercase' }}>{l}</div>
+                </div>
+              ))}
+            </div>
+          </FadeIn>
+          <FadeIn delay={160}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gridTemplateRows:'auto auto', gap:'8px' }}>
+              <Img label="field workers" style={{ aspectRatio:'3/4', gridRow:'1/3' }}/>
+              <Img label="palm nursery" style={{ aspectRatio:'4/3' }}/>
+              <Img label="quality check" style={{ aspectRatio:'4/3' }}/>
+            </div>
+          </FadeIn>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Products ─────────────────────────────────────────────────────────────────
+function Products() {
+  const [tab, setTab] = useState('banana');
+  const prods = {
+    banana: {
+      latin: 'Musa acuminata',
+      title: 'Premium Bananas',
+      body: 'Our Cavendish and specialty banana varieties are grown at altitude across Northern Tanzania. Consistent in size, flavor, and shelf-life — ideal for export to Europe, the Middle East, and Asia.',
+      specs: [['Varieties','Cavendish, Red Banana, Plantain'],['Season','Year-round harvest'],['Certifications','GlobalG.A.P., Rainforest Alliance'],['Export Markets','EU, UAE, Southeast Asia']],
+      img: 'banana bunch close-up',
+    },
+    palm: {
+      latin: 'Elaeis guineensis',
+      title: 'Palm Oil',
+      body: 'Sustainably produced crude and refined palm oil from our coastal and lowland plantations. RSPO-certified, fully traceable from field to barrel, meeting the highest global standards.',
+      specs: [['Products','CPO, RBDPO, Palm Kernel Oil'],['Processing','On-site mill, cold-press'],['Certifications','RSPO, ISO 22000'],['Applications','Food, cosmetics, biofuel']],
+      img: 'palm fruit cluster',
+    },
+  };
+  const p = prods[tab];
+  return (
+    <section id="products" style={{ padding:'120px 0', background:'var(--bg-sub)' }}>
+      <div className="container">
+        <FadeIn>
+          <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:'64px', flexWrap:'wrap', gap:'20px' }}>
+            <div>
+              <div className="label" style={{ marginBottom:'14px' }}>Our Products</div>
+              <h2 style={{ fontSize:'clamp(28px, 3.5vw, 50px)', fontWeight:600 }}>What We Grow</h2>
+            </div>
+            <div style={{ display:'flex', border:'1px solid var(--border)', borderRadius:'3px', overflow:'hidden' }}>
+              {[['banana','Bananas'],['palm','Palm Oil']].map(([k,l])=>(
+                <button key={k} onClick={()=>setTab(k)} style={{
+                  padding:'11px 28px', border:'none', cursor:'pointer', fontFamily:'DM Sans, sans-serif',
+                  background: tab===k ? '#f5c800' : 'transparent',
+                  color: tab===k ? '#1a1100' : 'var(--fg-muted)',
+                  fontSize:'13px', fontWeight: tab===k ? 500 : 400, letterSpacing:'0.05em',
+                  transition:'all 0.2s',
+                }}>{l}</button>
+              ))}
+            </div>
+          </div>
+        </FadeIn>
+        <FadeIn delay={100}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'72px', alignItems:'start' }}>
+            <Img label={p.img} style={{ aspectRatio:'5/4' }}/>
+            <div>
+              <div style={{ fontSize:'13px', fontStyle:'italic', color:'var(--fg-muted)', marginBottom:'14px', letterSpacing:'0.04em' }}>{p.latin}</div>
+              <h3 style={{ fontSize:'38px', fontWeight:600, marginBottom:'22px' }}>{p.title}</h3>
+              <p style={{ fontSize:'15.5px', color:'var(--fg-muted)', lineHeight:1.85, marginBottom:'36px' }}>{p.body}</p>
+              <div style={{ borderTop:'1px solid var(--border)', paddingTop:'32px', display:'flex', flexDirection:'column', gap:'14px' }}>
+                {p.specs.map(([k,v])=>(
+                  <div key={k} style={{ display:'grid', gridTemplateColumns:'148px 1fr', gap:'12px' }}>
+                    <span style={{ fontSize:'11px', color:'var(--fg-muted)', letterSpacing:'0.1em', textTransform:'uppercase', paddingTop:'2px' }}>{k}</span>
+                    <span style={{ fontSize:'14px', color:'var(--fg)' }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+              <a href="#contact" className="btn-banana" style={{ marginTop:'36px', padding:'12px 30px', fontSize:'12px', letterSpacing:'0.1em' }}>
+                Request Samples
+              </a>
+            </div>
+          </div>
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
+// ── Sustainability ───────────────────────────────────────────────────────────
+function Sustainability() {
+  const pillars = [
+    ['◈', 'Land Stewardship', 'We farm with regenerative practices — rotating crops, maintaining soil health, and preserving wildlife corridors across our 5,000+ hectare operations.'],
+    ['◉', 'Community Impact', 'Over 800 permanent employees and thousands of seasonal workers. We invest in local schools, healthcare, and professional training throughout rural Tanzania.'],
+    ['◎', 'Clean Supply Chain', 'Full traceability from seed to shipment. RSPO-certified palm oil and GlobalG.A.P. bananas — transparent at every step for our global partners.'],
+  ];
+  return (
+    <section id="sustainability" style={{ padding:'120px 0' }}>
+      <div className="container">
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1.4fr', gap:'88px', alignItems:'start' }}>
+          <FadeIn>
+            <div className="label" style={{ marginBottom:'16px' }}>Sustainability & ESG</div>
+            <h2 style={{ fontSize:'clamp(28px, 3.5vw, 50px)', fontWeight:600, marginBottom:'24px' }}>
+              Growth That<br/>Gives Back
+            </h2>
+            <p style={{ fontSize:'15.5px', color:'var(--fg-muted)', lineHeight:1.85, marginBottom:'36px' }}>
+              At Top Crop, sustainability is not a certification — it is how we farm. We report annually against GRI standards and maintain open partnerships with NGOs and government bodies across Tanzania.
+            </p>
+            <Img label="ESG annual report" style={{ aspectRatio:'4/3' }}/>
+          </FadeIn>
+          <FadeIn delay={150}>
+            <div style={{ paddingTop:'64px' }}>
+              {pillars.map(([icon, title, body], i) => (
+                <div key={i} style={{ padding:'36px 0', borderBottom: i<2 ? '1px solid var(--border)' : 'none', display:'flex', gap:'24px' }}>
+                  <span style={{ fontSize:'20px', color:'var(--accent)', marginTop:'3px', flexShrink:0 }}>{icon}</span>
+                  <div>
+                    <h4 style={{ fontSize:'21px', fontWeight:600, marginBottom:'12px' }}>{title}</h4>
+                    <p style={{ fontSize:'15px', color:'var(--fg-muted)', lineHeight:1.8 }}>{body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </FadeIn>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Gallery ──────────────────────────────────────────────────────────────────
+function Gallery() {
+  const imgs = [
+    { label:'banana plantation rows', wide:true },
+    { label:'palm tree canopy', wide:false },
+    { label:'harvesting team', wide:false },
+    { label:'processing facility', wide:false },
+    { label:'export packaging', wide:true },
+    { label:'irrigation system', wide:false },
+    { label:'sunrise over farm', wide:false },
+    { label:'soil sampling', wide:false },
+  ];
+  return (
+    <section id="farm" style={{ padding:'120px 0', background:'var(--bg-sub)' }}>
+      <div className="container">
+        <FadeIn>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:'52px' }}>
+            <div>
+              <div className="label" style={{ marginBottom:'14px' }}>Farm Gallery</div>
+              <h2 style={{ fontSize:'clamp(28px, 3.5vw, 50px)', fontWeight:600 }}>See Our Operations</h2>
+            </div>
+            <a href="#contact" style={{ fontSize:'13px', color:'var(--accent)', textDecoration:'underline', textUnderlineOffset:'5px', letterSpacing:'0.05em' }}>
+              Schedule a Visit →
+            </a>
+          </div>
+        </FadeIn>
+        <FadeIn delay={100}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'8px' }}>
+            {imgs.map((img, i) => (
+              <Img key={i} label={img.label} style={{ aspectRatio: img.wide ? '16/7' : '4/3', gridColumn: img.wide ? 'span 2' : 'span 1' }}/>
+            ))}
+          </div>
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
+// ── News ─────────────────────────────────────────────────────────────────────
+function News() {
+  const articles = [
+    { date:'March 2026', cat:'Press Release', title:'Top Crop Expands to Morogoro Region', body:'We announce the acquisition of 800 additional hectares in the Morogoro valley, increasing banana production capacity by 30%.' },
+    { date:'February 2026', cat:'Sustainability', title:'RSPO Certification Renewed for Third Year', body:'Our palm oil division maintained its Roundtable on Sustainable Palm Oil certification following rigorous third-party audits.' },
+    { date:'January 2026', cat:'Partnership', title:'New EU Distribution Agreement Signed', body:'A 3-year supply agreement securing distribution across 12 European countries begins Q2 2026.' },
+  ];
+  return (
+    <section id="news" style={{ padding:'120px 0' }}>
+      <div className="container">
+        <FadeIn>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:'56px' }}>
+            <div>
+              <div className="label" style={{ marginBottom:'14px' }}>Latest News</div>
+              <h2 style={{ fontSize:'clamp(28px, 3.5vw, 50px)', fontWeight:600 }}>Updates</h2>
+            </div>
+            <a href="#" style={{ fontSize:'13px', color:'var(--accent)', textDecoration:'underline', textUnderlineOffset:'5px', letterSpacing:'0.05em' }}>All News →</a>
+          </div>
+        </FadeIn>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'1px', background:'var(--border)', border:'1px solid var(--border)' }}>
+          {articles.map((a, i) => (
+            <FadeIn key={i} delay={i*90}>
+              <div style={{ background:'var(--bg)', padding:'40px 36px', cursor:'pointer', transition:'background 0.2s', height:'100%' }}
+                onMouseEnter={e=>e.currentTarget.style.background='var(--bg-sub)'}
+                onMouseLeave={e=>e.currentTarget.style.background='var(--bg)'}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'20px' }}>
+                  <span style={{ fontSize:'9.5px', color:'var(--accent)', letterSpacing:'0.16em', textTransform:'uppercase' }}>{a.cat}</span>
+                  <span style={{ fontSize:'11px', color:'var(--fg-muted)' }}>{a.date}</span>
+                </div>
+                <h3 style={{ fontSize:'20px', fontWeight:600, marginBottom:'14px', lineHeight:1.3 }}>{a.title}</h3>
+                <p style={{ fontSize:'14px', color:'var(--fg-muted)', lineHeight:1.8 }}>{a.body}</p>
+                <div style={{ marginTop:'28px', fontSize:'12px', color:'var(--accent)', letterSpacing:'0.04em' }}>Read More →</div>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Careers ──────────────────────────────────────────────────────────────────
+function Careers() {
+  const roles = [
+    ['Agronomy Manager', 'Kilimanjaro Region', 'Full-time'],
+    ['Export Logistics Coordinator', 'Dar es Salaam', 'Full-time'],
+    ['Sustainability Analyst', 'Remote / Arusha', 'Full-time'],
+  ];
+  return (
+    <section id="careers" style={{ padding:'120px 0', background:'var(--bg-sub)' }}>
+      <div className="container">
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1.6fr', gap:'88px', alignItems:'start' }}>
+          <FadeIn>
+            <div className="label" style={{ marginBottom:'16px' }}>Careers</div>
+            <h2 style={{ fontSize:'clamp(28px, 3.5vw, 46px)', fontWeight:600, marginBottom:'20px' }}>
+              Join the<br/>Top Crop Team
+            </h2>
+            <p style={{ fontSize:'15.5px', color:'var(--fg-muted)', lineHeight:1.85 }}>
+              We're always looking for people who believe in sustainable agriculture and want to make a real impact in East Africa and beyond.
+            </p>
+          </FadeIn>
+          <FadeIn delay={150}>
+            <div style={{ display:'flex', flexDirection:'column', gap:'1px', background:'var(--border)' }}>
+              {roles.map(([title, loc, type], i) => (
+                <div key={i} style={{ background:'var(--bg)', padding:'28px 32px', display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer', transition:'background 0.2s' }}
+                  onMouseEnter={e=>e.currentTarget.style.background='var(--bg-card)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='var(--bg)'}>
+                  <div>
+                    <div style={{ fontSize:'17px', fontWeight:500, marginBottom:'6px' }}>{title}</div>
+                    <div style={{ fontSize:'12px', color:'var(--fg-muted)' }}>{loc} · {type}</div>
+                  </div>
+                  <span style={{ color:'var(--accent)', fontSize:'18px', flexShrink:0 }}>→</span>
+                </div>
+              ))}
+              <div style={{ background:'var(--bg)', padding:'20px 32px', textAlign:'center', borderTop:'none' }}>
+                <a href="mailto:careers@topcrop.tz" style={{ fontSize:'13px', color:'var(--fg-muted)', letterSpacing:'0.03em' }}>
+                  Don't see a fit? Send an open application →
+                </a>
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Contact ──────────────────────────────────────────────────────────────────
+function Contact() {
+  const [form, setForm] = useState({ name:'', email:'', role:'Buyer / Distributor', message:'' });
+  const [sent, setSent] = useState(false);
+  const set = (k) => (e) => setForm(f => ({...f, [k]: e.target.value}));
+  return (
+    <section id="contact" style={{ padding:'120px 0' }}>
+      <div className="container">
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'88px' }}>
+          <FadeIn>
+            <div className="label" style={{ marginBottom:'16px' }}>Contact</div>
+            <h2 style={{ fontSize:'clamp(28px, 3.5vw, 50px)', fontWeight:600, marginBottom:'28px' }}>
+              Let's Talk<br/>Business
+            </h2>
+            <p style={{ fontSize:'15.5px', color:'var(--fg-muted)', lineHeight:1.85, marginBottom:'48px' }}>
+              Whether you're a buyer, investor, or potential partner — our team responds within 24 hours.
+            </p>
+            {[['HQ','Dar es Salaam, Tanzania'],['Processing','Nyamwage, Rufiji District'],['Email','hello@topcrop.tz'],['Phone','+255 27 250 4000']].map(([k,v])=>(
+              <div key={k} style={{ display:'flex', gap:'24px', marginBottom:'20px' }}>
+                <span style={{ fontSize:'10px', color:'var(--accent)', letterSpacing:'0.14em', textTransform:'uppercase', width:'80px', paddingTop:'3px', flexShrink:0 }}>{k}</span>
+                <span style={{ fontSize:'15px', color:'var(--fg-muted)' }}>{v}</span>
+              </div>
+            ))}
+          </FadeIn>
+          <FadeIn delay={150}>
+            {sent ? (
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'400px', gap:'16px' }}>
+                <div style={{ width:'52px', height:'52px', border:'1px solid var(--accent)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'22px', color:'var(--accent)' }}>✓</div>
+                <h3 style={{ fontSize:'24px', fontWeight:600 }}>Message Sent</h3>
+                <p style={{ fontSize:'15px', color:'var(--fg-muted)' }}>We'll be in touch within 24 hours.</p>
+                <button onClick={()=>setSent(false)} style={{ marginTop:'8px', fontSize:'12px', color:'var(--accent)', background:'none', border:'none', cursor:'pointer', letterSpacing:'0.08em', textDecoration:'underline', textUnderlineOffset:'4px' }}>Send another</button>
+              </div>
+            ) : (
+              <form onSubmit={e=>{e.preventDefault();setSent(true);}} style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
+                {[['name','Full Name','text'],['email','Email Address','email']].map(([n,l,t])=>(
+                  <div key={n}>
+                    <label style={{ fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.14em', textTransform:'uppercase', display:'block', marginBottom:'8px' }}>{l}</label>
+                    <input type={t} required value={form[n]} onChange={set(n)}/>
+                  </div>
+                ))}
+                <div>
+                  <label style={{ fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.14em', textTransform:'uppercase', display:'block', marginBottom:'8px' }}>I am a</label>
+                  <select value={form.role} onChange={set('role')}>
+                    {['Buyer / Distributor','Investor','Business Partner','Other'].map(o=><option key={o}>{o}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.14em', textTransform:'uppercase', display:'block', marginBottom:'8px' }}>Message</label>
+                  <textarea required rows={5} value={form.message} onChange={set('message')} style={{ resize:'vertical' }}/>
+                </div>
+                <button type="submit" className="btn-banana" style={{ padding:'16px', fontSize:'12px', letterSpacing:'0.1em', width:'100%' }}>
+                  Send Message
+                </button>
+              </form>
+            )}
+          </FadeIn>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Footer ───────────────────────────────────────────────────────────────────
+function Footer() {
+  const cols = [
+    { title:'Company', links:['About','Sustainability','News','Careers'] },
+    { title:'Products', links:['Bananas','Palm Oil','Certifications','Traceability'] },
+    { title:'Connect', links:['Contact','Investors','Media','Partners'] },
+  ];
+  return (
+    <footer style={{ background:'var(--bg-sub)', borderTop:'1px solid var(--border)', padding:'64px 0 40px' }}>
+      <div className="container">
+        <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:'48px', marginBottom:'56px' }}>
+          <div>
+            <div style={{ fontFamily:'Playfair Display', fontSize:'21px', fontWeight:700, marginBottom:'5px' }}>TOP CROP</div>
+            <div style={{ fontSize:'8px', letterSpacing:'0.32em', color:'var(--accent)', textTransform:'uppercase', marginBottom:'20px' }}>Tanzania</div>
+            <p style={{ fontSize:'13px', color:'var(--fg-muted)', lineHeight:1.85, maxWidth:'260px' }}>
+              Growing premium bananas and sustainable palm oil from Tanzania's most fertile lands since 2024.
+            </p>
+          </div>
+          {cols.map(col=>(
+            <div key={col.title}>
+              <div style={{ fontSize:'9.5px', letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--accent)', marginBottom:'20px' }}>{col.title}</div>
+              {col.links.map(l=>(
+                <a key={l} href={`#${l.toLowerCase()}`} style={{ display:'block', fontSize:'13px', color:'var(--fg-muted)', marginBottom:'12px', transition:'color 0.2s' }}
+                  onMouseEnter={e=>e.target.style.color='var(--fg)'}
+                  onMouseLeave={e=>e.target.style.color='var(--fg-muted)'}>
+                  {l}
+                </a>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div style={{ borderTop:'1px solid var(--border)', paddingTop:'28px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span style={{ fontSize:'12px', color:'var(--fg-muted)' }}>© 2026 Top Crop Ltd. · All rights reserved</span>
+          <span style={{ fontSize:'12px', color:'var(--fg-muted)' }}>Registered in Tanzania · TIN 123-456-789</span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+// ── Tweaks Panel ─────────────────────────────────────────────────────────────
+function TweaksPanel({ tweaks, onChange, open }) {
+  if (!open) return null;
+  const panelStyle = {
+    position:'fixed', bottom:'24px', right:'24px',
+    background:'var(--bg-card)', border:'1px solid var(--border)',
+    borderRadius:'8px', padding:'22px', width:'236px', zIndex:9999,
+    boxShadow:'0 8px 40px rgba(0,0,0,0.5)',
+  };
+  const labelStyle = { fontSize:'10px', color:'var(--fg-muted)', letterSpacing:'0.12em', textTransform:'uppercase', display:'block', marginBottom:'7px' };
+  const selectStyle = { width:'100%', background:'var(--bg)', border:'1px solid var(--border)', color:'var(--fg)', padding:'8px 10px', borderRadius:'3px', fontSize:'12.5px', fontFamily:'DM Sans,sans-serif', cursor:'pointer', marginBottom:'14px' };
+  return (
+    <div style={panelStyle}>
+      <div style={{ fontSize:'10px', letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--accent)', marginBottom:'18px', fontWeight:500 }}>Tweaks</div>
+      <label style={labelStyle}>Theme</label>
+      <select style={selectStyle} value={tweaks.theme} onChange={e=>onChange('theme',e.target.value)}>
+        <option value="dark">Dark Forest</option>
+        <option value="light">Light Meadow</option>
+        <option value="earth">Earth Tones</option>
+      </select>
+      <label style={labelStyle}>Hero Layout</label>
+      <select style={selectStyle} value={tweaks.heroStyle} onChange={e=>onChange('heroStyle',e.target.value)}>
+        <option value="bold">Bold Headline</option>
+        <option value="split">Split Layout</option>
+        <option value="minimal">Minimal</option>
+      </select>
+      <label style={labelStyle}>Nav Style</label>
+      <select style={{...selectStyle, marginBottom:0}} value={tweaks.navStyle} onChange={e=>onChange('navStyle',e.target.value)}>
+        <option value="transparent">Transparent</option>
+        <option value="solid">Solid</option>
+      </select>
+    </div>
+  );
+}
+
+// ── App ──────────────────────────────────────────────────────────────────────
+function App() {
+  const [tweaks, setTweaks] = useState(TWEAK_DEFAULTS);
+  const [tweaksOpen, setTweaksOpen] = useState(false);
+
+  function onChange(k, v) {
+    const next = { ...tweaks, [k]: v };
+    setTweaks(next);
+    if (k === 'theme') applyTheme(v);
+    window.parent.postMessage({ type:'__edit_mode_set_keys', edits:{ [k]: v } }, '*');
+  }
+
+  useEffect(() => {
+    applyTheme(tweaks.theme);
+    const handler = (e) => {
+      if (e.data?.type === '__activate_edit_mode') setTweaksOpen(true);
+      else if (e.data?.type === '__deactivate_edit_mode') setTweaksOpen(false);
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({ type:'__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  return (
+    <>
+      <Nav navStyle={tweaks.navStyle}/>
+      <Hero heroStyle={tweaks.heroStyle}/>
+      <Stats/>
+      <About/>
+      <Products/>
+      <Sustainability/>
+      <Gallery/>
+      <News/>
+      <Careers/>
+      <Contact/>
+      <Footer/>
+      <TweaksPanel tweaks={tweaks} onChange={onChange} open={tweaksOpen}/>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
