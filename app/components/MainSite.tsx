@@ -547,10 +547,18 @@ function TweaksPanel({ theme, heroStyle, onTheme, onHero }: { theme: string; her
 export default function MainSite({ initialData }: { initialData: SiteData }) {
   const [theme, setTheme]         = useState('light');
   const [heroStyle, setHeroStyle] = useState('minimal');
+  const [data, setData]           = useState(initialData);
 
   useEffect(() => { applyTheme(theme); }, [theme]);
 
-  const { content, news, careers, photos, settings } = initialData;
+  useEffect(() => {
+    fetch('/api/data')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && 'content' in d) setData(d); })
+      .catch(() => {});
+  }, []);
+
+  const { content, news, careers, photos, settings } = data;
 
   return (
     <>
