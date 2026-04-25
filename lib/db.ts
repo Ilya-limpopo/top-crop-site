@@ -10,34 +10,11 @@ let ready = false;
 
 async function init() {
   if (ready) return;
-  await db.executeMultiple(`
-    CREATE TABLE IF NOT EXISTS content (
-      key   TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS news (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      date       TEXT NOT NULL DEFAULT '',
-      category   TEXT NOT NULL DEFAULT '',
-      title      TEXT NOT NULL DEFAULT '',
-      body       TEXT NOT NULL DEFAULT '',
-      created_at INTEGER DEFAULT (unixepoch())
-    );
-    CREATE TABLE IF NOT EXISTS careers (
-      id       INTEGER PRIMARY KEY AUTOINCREMENT,
-      title    TEXT NOT NULL DEFAULT '',
-      location TEXT NOT NULL DEFAULT '',
-      type     TEXT NOT NULL DEFAULT 'Full-time'
-    );
-    CREATE TABLE IF NOT EXISTS photos (
-      slot TEXT PRIMARY KEY,
-      url  TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS settings (
-      key   TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-  `);
+  await db.execute('CREATE TABLE IF NOT EXISTS content (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+  await db.execute('CREATE TABLE IF NOT EXISTS news (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL DEFAULT \'\', category TEXT NOT NULL DEFAULT \'\', title TEXT NOT NULL DEFAULT \'\', body TEXT NOT NULL DEFAULT \'\', created_at INTEGER DEFAULT (unixepoch()))');
+  await db.execute('CREATE TABLE IF NOT EXISTS careers (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL DEFAULT \'\', location TEXT NOT NULL DEFAULT \'\', type TEXT NOT NULL DEFAULT \'Full-time\')');
+  await db.execute('CREATE TABLE IF NOT EXISTS photos (slot TEXT PRIMARY KEY, url TEXT NOT NULL)');
+  await db.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
   await seed();
   ready = true;
 }

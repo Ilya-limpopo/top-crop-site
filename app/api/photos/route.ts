@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { db, init } from '@/lib/db';
 import { isAuthenticated } from '@/lib/auth';
 import { uploadImage } from '@/lib/cloudinary';
