@@ -3,12 +3,14 @@ export const dynamic = 'force-dynamic';
 import { execute } from '@/lib/db';
 import { checkAuth } from '@/lib/auth';
 
+const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'CDN-Cache-Control': 'no-store', 'Vercel-CDN-Cache-Control': 'no-store' };
+
 export async function GET() {
   try {
     const { rows } = await execute('SELECT id, date, category, title, body FROM news ORDER BY created_at DESC');
-    return NextResponse.json(rows);
+    return NextResponse.json(rows, { headers: NO_CACHE });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    return NextResponse.json({ error: String(e) }, { status: 500, headers: NO_CACHE });
   }
 }
 

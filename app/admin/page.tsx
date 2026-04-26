@@ -253,13 +253,13 @@ function CareersSection({ data, onChange }: { data: SiteData; onChange: (d: Site
   }
 
   async function remove(id: number) {
-    const res = await fetch(`/api/careers/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/careers/${id}`, { method: 'DELETE', cache: 'no-store' });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       alert(`Delete failed (${res.status}): ${body.error ?? 'unknown error'}`);
       return;
     }
-    const listRes = await fetch('/api/careers');
+    const listRes = await fetch('/api/careers', { cache: 'no-store' });
     if (listRes.ok) {
       const fresh = await listRes.json();
       onChange({ ...data, careers: fresh });
@@ -268,11 +268,21 @@ function CareersSection({ data, onChange }: { data: SiteData; onChange: (d: Site
     }
   }
 
+  async function wipeAll() {
+    if (!confirm('Delete ALL career positions? This cannot be undone.')) return;
+    const res = await fetch('/api/admin/wipe-careers', { method: 'POST', cache: 'no-store' });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(`Wipe failed: ${body.error ?? res.status}`); return; }
+    alert(`Wiped. before=${body.before}, after=${body.after}`);
+    onChange({ ...data, careers: [] });
+  }
+
   const sf = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm(f => ({ ...f, [k]: e.target.value }));
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
+        <button onClick={wipeAll} style={{ ...ghostBtn, color: '#c0392b', borderColor: '#f5c6c0' }}>Wipe All</button>
         <button onClick={startNew} style={greenBtn}>+ Add Position</button>
       </div>
       {editing !== null && (
@@ -353,7 +363,7 @@ export default function AdminPage() {
       .then(j => { if (!j.authenticated) router.push('/admin/login'); })
       .catch(() => router.push('/admin/login'));
 
-    fetch('/api/data')
+    fetch('/api/data', { cache: 'no-store' })
       .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); })
       .then((d: SiteData) => { if (d && 'content' in d) setData(d); })
       .catch(e => console.error('[Admin] data fetch failed:', e))
