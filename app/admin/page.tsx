@@ -153,8 +153,18 @@ function NewsSection({ data, onChange }: { data: SiteData; onChange: (d: SiteDat
 
   async function remove(id: number) {
     const res = await fetch(`/api/news/${id}`, { method: 'DELETE' });
-    if (!res.ok) { alert('Failed to delete article. Please try again.'); return; }
-    onChange({ ...data, news: news.filter(n => n.id !== id) });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(`Delete failed (${res.status}): ${body.error ?? 'unknown error'}`);
+      return;
+    }
+    const listRes = await fetch('/api/news');
+    if (listRes.ok) {
+      const fresh = await listRes.json();
+      onChange({ ...data, news: fresh });
+    } else {
+      onChange({ ...data, news: news.filter(n => n.id !== id) });
+    }
   }
 
   const sf = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm(f => ({ ...f, [k]: e.target.value }));
@@ -224,8 +234,18 @@ function CareersSection({ data, onChange }: { data: SiteData; onChange: (d: Site
 
   async function remove(id: number) {
     const res = await fetch(`/api/careers/${id}`, { method: 'DELETE' });
-    if (!res.ok) { alert('Failed to delete position. Please try again.'); return; }
-    onChange({ ...data, careers: careers.filter(c => c.id !== id) });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(`Delete failed (${res.status}): ${body.error ?? 'unknown error'}`);
+      return;
+    }
+    const listRes = await fetch('/api/careers');
+    if (listRes.ok) {
+      const fresh = await listRes.json();
+      onChange({ ...data, careers: fresh });
+    } else {
+      onChange({ ...data, careers: careers.filter(c => c.id !== id) });
+    }
   }
 
   const sf = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm(f => ({ ...f, [k]: e.target.value }));
