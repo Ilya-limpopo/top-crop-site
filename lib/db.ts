@@ -47,9 +47,13 @@ async function pipeline(
 }
 
 // ── Public helpers ────────────────────────────────────────────────────────────
-export async function execute(sql: string, args: (string | number | null)[] = []): Promise<{ rows: Record<string, string | number | null>[]; lastInsertRowid: number | null }> {
+export async function execute(sql: string, args: (string | number | null)[] = []): Promise<{ rows: Record<string, string | number | null>[]; lastInsertRowid: number | null; affected: number }> {
   const [result] = await pipeline([{ sql, args }]);
-  return { rows: toObj(result), lastInsertRowid: result.last_insert_rowid ? Number(result.last_insert_rowid) : null };
+  return {
+    rows: toObj(result),
+    lastInsertRowid: result.last_insert_rowid ? Number(result.last_insert_rowid) : null,
+    affected: result.affected_row_count ?? 0,
+  };
 }
 
 export async function batch(stmts: { sql: string; args?: (string | number | null)[] }[]): Promise<void> {

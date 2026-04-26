@@ -152,13 +152,16 @@ function NewsSection({ data, onChange }: { data: SiteData; onChange: (d: SiteDat
   }
 
   async function remove(id: number) {
-    const res = await fetch(`/api/news/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/news/${id}`, { method: 'DELETE', cache: 'no-store' });
+    const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
       alert(`Delete failed (${res.status}): ${body.error ?? 'unknown error'}`);
       return;
     }
-    const listRes = await fetch('/api/news');
+    if (typeof body.affected === 'number' && body.affected !== 1) {
+      alert(`Warning: server reports ${body.affected} rows affected by id=${body.id}. Expected 1.`);
+    }
+    const listRes = await fetch('/api/news', { cache: 'no-store' });
     if (listRes.ok) {
       const fresh = await listRes.json();
       onChange({ ...data, news: fresh });
@@ -167,11 +170,28 @@ function NewsSection({ data, onChange }: { data: SiteData; onChange: (d: SiteDat
     }
   }
 
+  async function wipeAll() {
+    if (!confirm('Delete ALL news articles? This cannot be undone.')) return;
+    const res = await fetch('/api/admin/wipe-news', { method: 'POST', cache: 'no-store' });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(`Wipe failed: ${body.error ?? res.status}`); return; }
+    alert(`Wiped. before=${body.before}, after=${body.after}`);
+    onChange({ ...data, news: [] });
+  }
+
+  async function showDiag() {
+    const res = await fetch('/api/admin/diag', { cache: 'no-store' });
+    const body = await res.json().catch(() => ({}));
+    alert(JSON.stringify(body, null, 2));
+  }
+
   const sf = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm(f => ({ ...f, [k]: e.target.value }));
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
+        <button onClick={showDiag} style={ghostBtn}>Diag</button>
+        <button onClick={wipeAll} style={{ ...ghostBtn, color: '#c0392b', borderColor: '#f5c6c0' }}>Wipe All News</button>
         <button onClick={startNew} style={greenBtn}>+ Add Article</button>
       </div>
       {editing !== null && (

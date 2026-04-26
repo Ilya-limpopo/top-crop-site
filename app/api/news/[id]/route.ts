@@ -21,8 +21,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
-    await execute('DELETE FROM news WHERE id=?', [Number(params.id)]);
-    return NextResponse.json({ ok: true });
+    const id = Number(params.id);
+    const r = await execute('DELETE FROM news WHERE id=?', [id]);
+    console.log('[DELETE /api/news]', { rawParam: params.id, parsedId: id, affected: r.affected });
+    return NextResponse.json({ ok: true, id, affected: r.affected });
   } catch (e) {
     console.error('[DELETE /api/news]', e);
     return NextResponse.json({ error: String(e) }, { status: 500 });
