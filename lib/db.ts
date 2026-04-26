@@ -69,7 +69,9 @@ export async function init(): Promise<void> {
     { sql: 'CREATE TABLE IF NOT EXISTS photos   (slot TEXT PRIMARY KEY, url TEXT NOT NULL)' },
     { sql: 'CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)' },
   ]);
-  await seed();
+  // Only seed once — check persistent flag in DB, not module-level var (which resets on every serverless cold start)
+  const { rows } = await execute("SELECT value FROM settings WHERE key='_seeded'");
+  if (rows.length === 0) await seed();
   ready = true;
 }
 
@@ -99,6 +101,8 @@ async function seed(): Promise<void> {
     );
   }
 
+  // Always mark as seeded, even if stmts were empty (tables already had data)
+  await execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('_seeded', '1')");
   if (stmts.length > 0) await batch(stmts);
 }
 
