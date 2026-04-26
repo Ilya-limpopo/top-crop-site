@@ -74,15 +74,32 @@ export async function init(): Promise<void> {
 }
 
 async function seed(): Promise<void> {
-  const { rows } = await execute('SELECT COUNT(*) as n FROM content');
-  if (Number(rows[0]?.n ?? 0) > 0) return;
-
-  await batch([
-    ...Object.entries(DEFAULT_CONTENT).map(([k, v])  => ({ sql: 'INSERT OR IGNORE INTO content  (key, value) VALUES (?, ?)',            args: [k, v] })),
-    ...DEFAULT_NEWS.map(n                             => ({ sql: 'INSERT INTO news     (date, category, title, body) VALUES (?, ?, ?, ?)', args: [n.date, n.category, n.title, n.body] })),
-    ...DEFAULT_CAREERS.map(c                          => ({ sql: 'INSERT INTO careers  (title, location, type) VALUES (?, ?, ?)',          args: [c.title, c.location, c.type] })),
-    ...Object.entries(DEFAULT_SETTINGS).map(([k, v]) => ({ sql: 'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)',              args: [k, v] })),
+  const [{ rows: cr }, { rows: nr }, { rows: car }] = await Promise.all([
+    execute('SELECT COUNT(*) as n FROM content'),
+    execute('SELECT COUNT(*) as n FROM news'),
+    execute('SELECT COUNT(*) as n FROM careers'),
   ]);
+
+  const stmts: { sql: string; args?: (string | number | null)[] }[] = [];
+
+  if (Number(cr[0]?.n ?? 0) === 0) {
+    stmts.push(
+      ...Object.entries(DEFAULT_CONTENT).map(([k, v])  => ({ sql: 'INSERT OR IGNORE INTO content  (key, value) VALUES (?, ?)', args: [k, v] as (string | number | null)[] })),
+      ...Object.entries(DEFAULT_SETTINGS).map(([k, v]) => ({ sql: 'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', args: [k, v] as (string | number | null)[] })),
+    );
+  }
+  if (Number(nr[0]?.n ?? 0) === 0) {
+    stmts.push(
+      ...DEFAULT_NEWS.map(n => ({ sql: 'INSERT INTO news (date, category, title, body) VALUES (?, ?, ?, ?)', args: [n.date, n.category, n.title, n.body] as (string | number | null)[] })),
+    );
+  }
+  if (Number(car[0]?.n ?? 0) === 0) {
+    stmts.push(
+      ...DEFAULT_CAREERS.map(c => ({ sql: 'INSERT INTO careers (title, location, type) VALUES (?, ?, ?)', args: [c.title, c.location, c.type] as (string | number | null)[] })),
+    );
+  }
+
+  if (stmts.length > 0) await batch(stmts);
 }
 
 // ── getSiteData ───────────────────────────────────────────────────────────────
