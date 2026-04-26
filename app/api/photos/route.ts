@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import { execute, init } from '@/lib/db';
-import { isAuthenticated } from '@/lib/auth';
+import { checkAuth } from '@/lib/auth';
 import { uploadImage } from '@/lib/cloudinary';
 
 export async function GET() {
@@ -13,22 +13,22 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAuthenticated()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  await init();
-
-  const form = await req.formData();
-  const file = form.get('file') as File | null;
-  const slot = form.get('slot') as string | null;
-
-  if (!file || !slot) return NextResponse.json({ error: 'Missing file or slot' }, { status: 400 });
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const url    = await uploadImage(buffer, slot);
-
-  await execute(
-    'INSERT INTO photos (slot, url) VALUES (?, ?) ON CONFLICT(slot) DO UPDATE SET url = excluded.url',
-    [slot, url],
-  );
-
-  return NextResponse.json({ url });
+  if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    await init();
+    const form = await req.formData();
+    const file = form.get('file') as File | null;
+    const slot = form.get('slot') as string | null;
+    if (!file || !slot) return NextResponse.json({ error: 'Missing file or slot' }, { status: 400 });
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const url    = await uploadImage(buffer, slot);
+    await execute(
+      'INSERT INTO photos (slot, url) VALUES (?, ?) ON CONFLICT(slot) DO UPDATE SET url = excluded.url',
+      [slot, url],
+    );
+    return NextResponse.json({ url });
+  } catch (e) {
+    console.error('[POST /api/photos]', e);
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
 }

@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { createHmac } from 'crypto';
+import type { NextRequest } from 'next/server';
 
 const SECRET  = process.env.AUTH_SECRET || 'dev-secret-please-change-in-production-min32';
 const COOKIE  = 'tc_session';
@@ -32,6 +33,15 @@ export function clearSession(): void {
 }
 
 export function isAuthenticated(): boolean {
-  const c = cookies().get(COOKIE);
-  return !!c && verify(c.value);
+  try {
+    const c = cookies().get(COOKIE);
+    return !!c && verify(c.value);
+  } catch {
+    return false;
+  }
+}
+
+export function checkAuth(req: NextRequest): boolean {
+  const val = req.cookies.get(COOKIE)?.value;
+  return !!val && verify(val);
 }
